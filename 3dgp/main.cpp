@@ -19,6 +19,7 @@ C3dglModel camera;
 C3dglModel table;
 C3dglModel vase;
 C3dglModel chicken;
+C3dglModel lamp;
 
 // The View Matrix
 mat4 matrixView;
@@ -96,6 +97,7 @@ bool init()
 	if (!table.load("models\\table.obj")) return false;
 	if (!vase.load("models\\vase.obj")) return false;
 	if (!chicken.load("models\\chicken.obj")) return false;
+	if (!lamp.load("models\\lamp.obj")) return false;
 
 	// Initialise the View Matrix (initial position of the camera)
 	matrixView = rotate(mat4(1), radians(12.f), vec3(1, 0, 0));
@@ -125,6 +127,12 @@ bool init()
 void renderScene(mat4& matrixView, float time, float deltaTime)
 {
 	mat4 m;
+
+	program.sendUniform("lightDir.direction", vec3(1.0, 0.5, 1.0));
+	program.sendUniform("lightDir.diffuse", vec3(0.6, 0.6, 0.6)); // dimmed white light
+	// setup View Matrix
+	program.sendUniform("matrixView", matrixView);
+	program.sendUniform("materialDiffuse", vec3(0.2, 0.2, 0.6));
 
 	program.sendUniform("material", vec3(1.0f, 0.0f, 0.0f));
 
@@ -202,6 +210,19 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	m = rotate(m, radians(120.f), vec3(0.0f, 1.0f, 0.0f));
 	m = scale(m, vec3(0.35f, 0.35f, 0.35f));
 	vase.render(m);
+
+	//lamp
+	m = matrixView;
+	m = translate(m, vec3(0.0f, -1.55f, 8.0f));
+	m = rotate(m, radians(310.f), vec3(0.0f, 1.0f, 0.0f));
+	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
+	lamp.render(m);
+
+	m = matrixView;
+	m = translate(m, vec3(0.0f, -1.55f, -9.0f));
+	m = rotate(m, radians(310.f), vec3(0.0f, 1.0f, 0.0f));
+	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
+	lamp.render(m);
 
 	program.sendUniform("material", vec3(0.0f, 0.0f, 1.0f));
 
