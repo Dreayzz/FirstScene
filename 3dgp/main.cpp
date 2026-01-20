@@ -26,6 +26,9 @@ mat4 matrixView;
 // GLSL Program
 C3dglProgram program;
 
+// Buffers
+unsigned buf, ind; // new buffer variable
+
 // Camera & navigation
 float maxspeed = 4.f;	// camera max speed
 float accel = 4.f;		// camera acceleration
@@ -34,6 +37,26 @@ float _fov = 60.f;		// field of view (zoom)
 
 bool init()
 {
+	// Vertex Data:
+	float vertices[] = {
+		-4, 0,-4, 0, 4,-7, 4, 0,-4, 0, 4,-7, 0, 7, 0, 0, 4,-7,
+		-4, 0, 4, 0, 4, 7, 4, 0, 4, 0, 4, 7, 0, 7, 0, 0, 4, 7,
+		-4, 0,-4,-7, 4, 0,-4, 0, 4,-7, 4, 0, 0, 7, 0,-7, 4, 0,
+		4, 0,-4, 7, 4, 0, 4, 0, 4, 7, 4, 0, 0, 7, 0, 7, 4, 0,
+		-4, 0,-4, 0,-1, 0,-4, 0, 4, 0,-1, 0, 4, 0,-4, 0,-1, 0,
+		4, 0, 4, 0,-1, 0
+	};
+
+	// Index Data
+	unsigned indices[] = {
+		0, 1, 2,        // side triangle
+		3, 4, 5,        // side triangle
+		6, 7, 8,        // side triangle
+		9, 10, 11,      // side triangle
+		12, 13, 14,     // one of the base triangles
+		13, 14, 15      // the other one reuses two out of the three vertices
+	};
+
 	// Initialise Shaders
 	C3dglShader vertexShader;
 	C3dglShader fragmentShader;
@@ -51,6 +74,16 @@ bool init()
 	if (!program.attach(fragmentShader)) return false;
 	if (!program.link()) return false;
 	if (!program.use(true)) return false;
+
+	// prepare vertex array
+	glGenBuffers(1, &buf);
+	glBindBuffer(GL_ARRAY_BUFFER, buf);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// prepare indices array
+	glGenBuffers(1, &ind);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ind);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	// rendering states
 	glEnable(GL_DEPTH_TEST);	// depth test is necessary for most 3D scenes
@@ -95,54 +128,24 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 
 	program.sendUniform("material", vec3(1.0f, 0.0f, 0.0f));
 
-// Buffers
-	unsigned buf, ind; // new buffer variable
-
-	// Vertex Data:
-	float vertices[] = {
-		-4, 0,-4, 0, 4,-7, 4, 0,-4, 0, 4,-7, 0, 7, 0, 0, 4,-7,
-		-4, 0, 4, 0, 4, 7, 4, 0, 4, 0, 4, 7, 0, 7, 0, 0, 4, 7,
-		-4, 0,-4,-7, 4, 0,-4, 0, 4,-7, 4, 0, 0, 7, 0,-7, 4, 0,
-		4, 0,-4, 7, 4, 0, 4, 0, 4, 7, 4, 0, 0, 7, 0, 7, 4, 0,
-		-4, 0,-4, 0,-1, 0,-4, 0, 4, 0,-1, 0, 4, 0,-4, 0,-1, 0,
-		4, 0, 4, 0,-1, 0
-	};
-
-	// Index Data
-	unsigned indices[] = {
-		0, 1, 2,        // side triangle
-		3, 4, 5,        // side triangle
-		6, 7, 8,        // side triangle
-		9, 10, 11,      // side triangle
-		12, 13, 14,     // one of the base triangles
-		13, 14, 15      // the other one reuses two out of the three vertices
-	};
-
-	// prepare vertex array
-	glGenBuffers(1, &buf);
-	glBindBuffer(GL_ARRAY_BUFFER, buf);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	// prepare indices array
-	glGenBuffers(1, &ind);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ind);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
 	// Bind (activate) the buffer
 	glBindBuffer(GL_ARRAY_BUFFER, buf);
 
-	// render nearly as usually
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
+	GLuint attribVertex = program.getAttribLocation("aVertex");
+	GLuint attribNormal = program.getAttribLocation("aNormal");
 
-	glVertexPointer(3, GL_FLOAT, 6 * sizeof(float), 0);
-	glNormalPointer(GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	// render nearly as usually
+	glEnableVertexAttribArray(attribVertex);
+	glEnableVertexAttribArray(attribNormal);
+
+	glVertexAttribPointer(attribVertex, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+	glVertexAttribPointer(attribNormal, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
 	// Bind (activate) index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ind);
 
 	m = matrixView;
-	m = translate(m, vec3(11.0f, 2.0f, -5.5f));
+	m = translate(m, vec3(-2.0f, 2.0f, -5.5f));
 	m = rotate(m, radians(180.f), vec3(1.0f, 0.0f, 0.0f));
 	m = rotate(m, radians(58.f * time), vec3(0.0f, 1.0f, 0.0f));
 	m = scale(m, vec3(0.5f, 0.5f, 0.5f));
@@ -152,13 +155,13 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	// Draw triangles using 18 indices (unsigned int), starting at number 0
 	glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableVertexAttribArray(attribVertex);
+	glDisableVertexAttribArray(attribNormal);
 
 	program.sendUniform("material", vec3(0.5f, 0.5f, 0.0f));
 
 	m = matrixView;
-	m = translate(m, vec3(11.0f, 2.74f, -5.5f));
+	m = translate(m, vec3(-2.0f, 2.74f, -5.5f));
 	m = rotate(m, radians(120.f), vec3(0.0f, 1.0f, 0.0f));
 	m = scale(m, vec3(0.03f, 0.03f, 0.03f));
 	for (int i = 0; i < 16; i++)
@@ -171,7 +174,7 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 
 	//table & chair 1
 	m = matrixView;
-	m = translate(m, vec3(15.0f, -13, 0.0f));
+	m = translate(m, vec3(0.0f, -13, 0.0f));
 	m = rotate(m, radians(120.f), vec3(0.0f, 1.0f, 0.0f));
 	m = scale(m, vec3(0.015f, 0.015f, 0.015f));
 	table.render(0, m);
@@ -193,16 +196,9 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	table.render(0, m);
 	table.render(1, m);
 
-	// camera
-	m = matrixView;
-	m = translate(m, vec3(-3.0f, 0, 0.0f));
-	m = rotate(m, radians(180.f), vec3(0.0f, 1.0f, 0.0f));
-	m = scale(m, vec3(0.04f, 0.04f, 0.04f));
-	camera.render(m);
-
 	//vase
 	m = matrixView;
-	m = translate(m, vec3(18.0f, -1.55f, 6.0f));
+	m = translate(m, vec3(5.0f, -1.55f, 6.0f));
 	m = rotate(m, radians(120.f), vec3(0.0f, 1.0f, 0.0f));
 	m = scale(m, vec3(0.35f, 0.35f, 0.35f));
 	vase.render(m);
@@ -211,7 +207,7 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 
 	// teapot
 	m = matrixView;
-	m = translate(m, vec3(15.0f, 0, 0.0f));
+	m = translate(m, vec3(2.0f, 0, 0.0f));
 	m = rotate(m, radians(120.f), vec3(0.0f, 1.0f, 0.0f));
 
 	// the GLUT objects require the Model View Matrix setup
