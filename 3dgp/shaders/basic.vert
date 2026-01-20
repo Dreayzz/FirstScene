@@ -61,7 +61,10 @@ vec4 PointLight(POINT light)
 {
 	// Calculate Point Light
 	vec4 color = vec4(0, 0, 0, 0);
-	// calculation code to be inserted in place of this comment
+	vec4 lightPosView = matrixView * vec4(light.position, 1.0);
+	vec3 L = normalize((lightPosView.xyz - position.xyz));
+	float NdotL = dot(normal, L);
+	color += vec4(materialDiffuse * light.diffuse, 1.0) * max(NdotL, 0.0);
 	return color;
 }
 

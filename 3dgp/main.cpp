@@ -129,12 +129,18 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	mat4 m;
 
 	program.sendUniform("lightDir.direction", vec3(1.0, 0.5, 1.0));
-	program.sendUniform("lightDir.diffuse", vec3(0.6, 0.6, 0.6)); // dimmed white light
+	program.sendUniform("lightDir.diffuse", vec3(0.7, 0.7, 0.7)); // dimmed white light
 	// setup View Matrix
 	program.sendUniform("matrixView", matrixView);
-	program.sendUniform("materialDiffuse", vec3(0.2, 0.2, 0.6));
+	program.sendUniform("materialDiffuse", vec3(0.9, 0.2, 0.6));
 
-	program.sendUniform("material", vec3(1.0f, 0.0f, 0.0f));
+	program.sendUniform("lightAmbient.color", vec3(0.1, 0.1, 0.1));
+	program.sendUniform("materialAmbient", vec3(1.0, 1.0, 1.0));
+
+	program.sendUniform("lightPoint.position", vec3(1.1, 4.3, 1.0));
+	program.sendUniform("lightPoint.diffuse", vec3(0.5, 0.5, 0.5));
+
+	program.sendUniform("materialDiffuse", vec3(1.0f, 0.0f, 0.0f));
 
 	// Bind (activate) the buffer
 	glBindBuffer(GL_ARRAY_BUFFER, buf);
@@ -166,7 +172,7 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	glDisableVertexAttribArray(attribVertex);
 	glDisableVertexAttribArray(attribNormal);
 
-	program.sendUniform("material", vec3(0.5f, 0.5f, 0.0f));
+	program.sendUniform("materialDiffuse", vec3(0.5f, 0.5f, 0.0f));
 
 	m = matrixView;
 	m = translate(m, vec3(-2.0f, 2.74f, -5.5f));
@@ -177,8 +183,21 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 		chicken.render(i, m);
 	}
 
+	//lamp
+	m = matrixView;
+	m = translate(m, vec3(0.0f, -1.55f, 8.0f));
+	m = rotate(m, radians(310.f), vec3(0.0f, 1.0f, 0.0f));
+	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
+	lamp.render(m);
 
-	program.sendUniform("material", vec3(0.6f, 0.6f, 0.6f));
+	m = matrixView;
+	m = translate(m, vec3(0.0f, -1.55f, -9.0f));
+	m = rotate(m, radians(310.f), vec3(0.0f, 1.0f, 0.0f));
+	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
+	lamp.render(m);
+
+
+	program.sendUniform("materialDiffuse", vec3(0.6f, 0.6f, 0.6f));
 
 	//table & chair 1
 	m = matrixView;
@@ -204,6 +223,8 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	table.render(0, m);
 	table.render(1, m);
 
+	program.sendUniform("materialDiffuse", vec3(0.0f, 0.0f, 1.0f));
+
 	//vase
 	m = matrixView;
 	m = translate(m, vec3(5.0f, -1.55f, 6.0f));
@@ -211,20 +232,7 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	m = scale(m, vec3(0.35f, 0.35f, 0.35f));
 	vase.render(m);
 
-	//lamp
-	m = matrixView;
-	m = translate(m, vec3(0.0f, -1.55f, 8.0f));
-	m = rotate(m, radians(310.f), vec3(0.0f, 1.0f, 0.0f));
-	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
-	lamp.render(m);
-
-	m = matrixView;
-	m = translate(m, vec3(0.0f, -1.55f, -9.0f));
-	m = rotate(m, radians(310.f), vec3(0.0f, 1.0f, 0.0f));
-	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
-	lamp.render(m);
-
-	program.sendUniform("material", vec3(0.0f, 0.0f, 1.0f));
+	program.sendUniform("materialDiffuse", vec3(0.0f, 1.0f, 0.0f));
 
 	// teapot
 	m = matrixView;
