@@ -14,10 +14,12 @@ uniform float shininess;
 
 in vec3 aVertex;
 in vec3 aNormal;
+in vec2 aTexCoord;
 
 out vec4 color;
-vec4 position;
-vec3 normal;
+out vec2 texCoord0;
+out vec4 position;
+out vec3 normal;
 
 // Light declarations
 struct AMBIENT
@@ -55,18 +57,8 @@ struct POINT
 	vec3 diffuse;
 	vec3 specular;
 };
-uniform POINT lightPoint;
-
-vec4 PointLight(POINT light)
-{
-	// Calculate Point Light
-	vec4 color = vec4(0, 0, 0, 0);
-	vec4 lightPosView = matrixView * vec4(light.position, 1.0);
-	vec3 L = normalize((lightPosView.xyz - position.xyz));
-	float NdotL = dot(normal, L);
-	color += vec4(materialDiffuse * light.diffuse, 1.0) * max(NdotL, 0.0);
-	return color;
-}
+uniform POINT lightPoint1;
+uniform POINT lightPoint2;
 
 void main(void)
 {
@@ -81,6 +73,8 @@ void main(void)
 	color = vec4(0, 0, 0, 1);
 	color += AmbientLight(lightAmbient);
 	color += DirectionalLight(lightDir);
-	color += PointLight(lightPoint);
+
+	// calculate texture coordinate
+	texCoord0 = aTexCoord;
 }
 

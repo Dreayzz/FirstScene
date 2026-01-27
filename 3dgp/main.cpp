@@ -20,12 +20,17 @@ C3dglModel table;
 C3dglModel vase;
 C3dglModel chicken;
 C3dglModel lamp;
+C3dglModel sphere;
 
 // The View Matrix
 mat4 matrixView;
 
 // GLSL Program
 C3dglProgram program;
+
+GLuint idTexWood;
+GLuint idTexFabric;
+GLuint idTexNone;
 
 // Buffers
 unsigned buf, ind; // new buffer variable
@@ -35,6 +40,9 @@ float maxspeed = 4.f;	// camera max speed
 float accel = 4.f;		// camera acceleration
 vec3 _acc(0), _vel(0);	// camera acceleration and velocity vectors
 float _fov = 60.f;		// field of view (zoom)
+
+bool light1On = true;
+bool light2On = true;
 
 bool init()
 {
@@ -57,6 +65,34 @@ bool init()
 		12, 13, 14,     // one of the base triangles
 		13, 14, 15      // the other one reuses two out of the three vertices
 	};
+
+	C3dglBitmap bm;
+
+	bm.load("models\\oak.bmp", GL_RGBA);
+	if (!bm.getBits()) return false;
+	
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &idTexWood);
+	glBindTexture(GL_TEXTURE_2D, idTexWood);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bm.getWidth(), bm.getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+
+	bm.load("models\\fabric4.png", GL_RGBA);
+	if (!bm.getBits()) return false;
+
+	glGenTextures(1, &idTexFabric);
+	glBindTexture(GL_TEXTURE_2D, idTexFabric);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bm.getWidth(), bm.getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, bm.getBits());
+		
+	glGenTextures(1, &idTexNone);
+	glBindTexture(GL_TEXTURE_2D, idTexNone);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	BYTE bytes[] = { 255, 255, 255 };
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_BGR, GL_UNSIGNED_BYTE, &bytes);
+
+	// Send the texture info to the shaders
+	program.sendUniform("texture0", 0);
 
 	// Initialise Shaders
 	C3dglShader vertexShader;
@@ -98,6 +134,7 @@ bool init()
 	if (!vase.load("models\\vase.obj")) return false;
 	if (!chicken.load("models\\chicken.obj")) return false;
 	if (!lamp.load("models\\lamp.obj")) return false;
+	if (!sphere.load("models\\sphere.obj")) return false;
 
 	// Initialise the View Matrix (initial position of the camera)
 	matrixView = rotate(mat4(1), radians(12.f), vec3(1, 0, 0));
@@ -129,7 +166,7 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	mat4 m;
 
 	program.sendUniform("lightDir.direction", vec3(1.0, 0.5, 1.0));
-	program.sendUniform("lightDir.diffuse", vec3(0.7, 0.7, 0.7)); // dimmed white light
+	program.sendUniform("lightDir.diffuse", vec3(0.3, 0.3, 0.3)); // dimmed white light
 	// setup View Matrix
 	program.sendUniform("matrixView", matrixView);
 	program.sendUniform("materialDiffuse", vec3(0.9, 0.2, 0.6));
@@ -137,10 +174,23 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	program.sendUniform("lightAmbient.color", vec3(0.1, 0.1, 0.1));
 	program.sendUniform("materialAmbient", vec3(1.0, 1.0, 1.0));
 
-	program.sendUniform("lightPoint.position", vec3(1.1, 4.3, 1.0));
-	program.sendUniform("lightPoint.diffuse", vec3(0.5, 0.5, 0.5));
+	program.sendUniform("lightPoint1.position", vec3(-2.38f, 4.3f, 5.2f));
+	program.sendUniform("lightPoint1.diffuse", vec3(0.5 + 0.5 * sin(time), 0.5 + 0.5 * sin(time + 2.09), 0.5 + 0.5 * sin(time + 4.18)));
+	program.sendUniform("lightPoint1.specular", vec3(1.0, 1.0, 1.0));
+
+	program.sendUniform("lightPoint2.position", vec3(-2.4f, 4.3f, -11.7f));
+	program.sendUniform("lightPoint2.diffuse", vec3(0.5, 0.5, 0.5));
+	program.sendUniform("lightPoint2.specular", vec3(1.0, 1.0, 1.0));
+
+	program.sendUniform("materialSpecular", vec3(0.6, 0.6, 1.0));
+	program.sendUniform("shininess", 10);
 
 	program.sendUniform("materialDiffuse", vec3(1.0f, 0.0f, 0.0f));
+
+	program.sendUniform("light1On", (int)light1On);
+	program.sendUniform("light2On", (int)light2On);
+
+	glBindTexture(GL_TEXTURE_2D, idTexNone);
 
 	// Bind (activate) the buffer
 	glBindBuffer(GL_ARRAY_BUFFER, buf);
@@ -196,32 +246,47 @@ void renderScene(mat4& matrixView, float time, float deltaTime)
 	m = scale(m, vec3(0.1f, 0.1f, 0.1f));
 	lamp.render(m);
 
+	program.sendUniform("materialDiffuse", vec3(1.0f, 1.0f, 1.0f));
 
-	program.sendUniform("materialDiffuse", vec3(0.6f, 0.6f, 0.6f));
+	m = matrixView;
+	m = translate(m, vec3(-2.4f, 4.3f, 5.3f));
+	m = scale(m, vec3(0.02f, 0.02f, 0.02f));
+	sphere.render(m);
+
+	m = matrixView;
+	m = translate(m, vec3(-2.4f, 4.3f, -11.7f));
+	m = scale(m, vec3(0.02f, 0.02f, 0.02f));
+	sphere.render(m);
+
+	glBindTexture(GL_TEXTURE_2D, idTexWood);
 
 	//table & chair 1
 	m = matrixView;
 	m = translate(m, vec3(0.0f, -13, 0.0f));
 	m = rotate(m, radians(120.f), vec3(0.0f, 1.0f, 0.0f));
 	m = scale(m, vec3(0.015f, 0.015f, 0.015f));
-	table.render(0, m);
-	table.render(1, m);
 	table.render(2, m);
 
-	//chair	2
+	//chair frame
+	table.render(0, m);
 	m = rotate(m, radians(90.f), vec3(0.0f, 1.0f, 0.0f));
 	table.render(0, m);
-	table.render(1, m);
-
-	//chair 3
 	m = rotate(m, radians(180.f), vec3(0.0f, 1.0f, 0.0f));
 	table.render(0, m);
-	table.render(1, m);
-
-	//chair 4
 	m = rotate(m, radians(270.f), vec3(0.0f, 1.0f, 0.0f));
 	table.render(0, m);
+
+	glBindTexture(GL_TEXTURE_2D, idTexFabric);
+
 	table.render(1, m);
+	m = rotate(m, radians(90.f), vec3(0.0f, 1.0f, 0.0f));
+	table.render(1, m);
+	m = rotate(m, radians(180.f), vec3(0.0f, 1.0f, 0.0f));
+	table.render(1, m);
+	m = rotate(m, radians(270.f), vec3(0.0f, 1.0f, 0.0f));
+	table.render(1, m);
+
+	glBindTexture(GL_TEXTURE_2D, idTexNone);
 
 	program.sendUniform("materialDiffuse", vec3(0.0f, 0.0f, 1.0f));
 
@@ -310,6 +375,8 @@ void onKeyUp(unsigned char key, int x, int y)
 	case 'd': _acc.x = _vel.x = 0; break;
 	case 'q':
 	case 'e': _acc.y = _vel.y = 0; break;
+	case '1': light1On = !light1On; break;
+	case '2': light2On = !light2On; break;
 	}
 }
 
